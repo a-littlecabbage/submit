@@ -1,1 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>投稿站</title>
+  <style>
+    :root {
+      --primary: #FFB800;
+      --primary-dark: #E5A500;
+      --primary-light: #FFF3D0;
+      --primary-bg: #FFF8E8;
+      --accent: #FF6B35;
+      --accent-dark: #E55A25;
+      --danger: #FF4757;
+      --bg: #F6F3EF;
+      --card-bg: #FFFFFF;
+      --text-primary: #2C2C2C;
+      --text-secondary: #666666;
+      --text-muted: #999999;
+      --border: #EDEDED;
+      --shadow: rgba(0, 0, 0, 0.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Noto Sans CJK SC", sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--card-bg);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    .navbar .title { font-size: 18px; font-weight: 700; }
+    .navbar .btn-post {
+      background: var(--primary); color: #fff; border: none;
+      padding: 7px 18px; border-radius: 20px; font-size: 14px; font-weight: 500;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(255,184,0,0.3);
+    }
+    .token-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+    }
+    .token-overlay.hidden { display: none; }
+    .token-card {
+      background: var(--card-bg); border-radius: 16px;
+      padding: 36px 28px; text-align: center; max-width: 320px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .token-card h3 { font-size: 18px; margin-bottom: 12px; }
+    .token-card p { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+    .token-card .error { color: var(--danger); font-weight: 500; }
+    .token-card .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .categories {
+      display: flex; gap: 8px; padding: 14px 16px; overflow-x: auto;
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-tag {
+      flex-shrink: 0; padding: 7px 18px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      background: var(--bg); border: 1px solid var(--border); cursor: pointer; color: var(--text-secondary);
+    }
+    .cat-tag.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+    .post-card {
+      background: var(--card-bg); border-radius: 12px; overflow: hidden; cursor: pointer;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+    .post-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--bg); }
+    .post-card .post-info { padding: 10px 12px; }
+    .post-card .post-title { font-size: 13px; font-weight: 500; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-card .post-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+    .post-card .post-meta .avatar { width: 18px; height: 18px; border-radius: 50%; background: var(--primary-light); }
+    .tab-bar {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px; background: var(--card-bg);
+      border-top: 1px solid var(--border); display: flex; z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 8px 0 6px; font-size: 10px; color: var(--text-muted); cursor: pointer;
+    }
+    .tab-item.active { color: var(--primary); }
+    .tab-item .tab-icon { font-size: 22px; margin-bottom: 2px; }
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); grid-column: 1 / -1; }
+    .empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+  </style>
+</head>
+<body>
 
+  <div class="token-overlay" id="tokenOverlay">
+    <div class="token-card">
+      <div class="spinner" id="tokenSpinner"></div>
+      <h3 id="tokenTitle">正在验证访问权限...</h3>
+      <p id="tokenMessage">请稍候</p>
+    </div>
+  </div>
+
+  <div class="navbar" id="navbar" style="display:none;">
+    <div class="title">投稿站</div>
+    <button class="btn-post" onclick="openPostModal()">+ 发布</button>
+  </div>
+
+  <div class="categories" id="categories" style="display:none;">
+    <button class="cat-tag active" onclick="filterPosts('all', this)">推荐</button>
+    <button class="cat-tag" onclick="filterPosts('日常', this)">日常</button>
+    <button class="cat-tag" onclick="filterPosts('美食', this)">美食</button>
+    <button class="cat-tag" onclick="filterPosts('旅行', this)">旅行</button>
+    <button class="cat-tag" onclick="filterPosts('穿搭', this)">穿搭</button>
+    <button class="cat-tag" onclick="filterPosts('其他', this)">其他</button>
+  </div>
+
+  <div class="post-grid" id="postGrid" style="display:none;"></div>
+  <div style="display:none; height:60px;" id="tabSpacer"></div>
+
+  <div class="tab-bar" id="tabBar" style="display:none;">
+    <div class="tab-item active" onclick="switchTab('home', this)"><span class="tab-icon">🏠</span><span>首页</span></div>
+    <div class="tab-item" onclick="switchTab('discover', this)"><span class="tab-icon">🔍</span><span>发现</span></div>
+    <div class="tab-item" onclick="switchTab('publish', this)"><span class="tab-icon">✏️</span><span>投稿</span></div>
+    <div class="tab-item" onclick="switchTab('profile', this)"><span class="tab-icon">👤</span><span>我的</span></div>
+  </div>
+
+  <script>
+    // ========== 配置（部署后替换） ==========
+    const SUPABASE_URL = 'https://你 的项目ID.supabase.co'
+    const SUPABASE_ANON_KEY = '你的anon-key'
+
+    let currentCategory = 'all'
+
+    // ========== Token 校验 ==========
+    async function verifyToken() {
+      const overlay = document.getElementById('tokenOverlay')
+      const spinner = document.getElementById('tokenSpinner')
+      const title = document.getElementById('tokenTitle')
+      const message = document.getElementById('tokenMessage')
+
+      const urlParams = new URLSearchParams(window.location.search)
+      const token = urlParams.get('t')
+
+      if (!token) {
+        spinner.style.display = 'none'
+        title.textContent = '无法访问'
+        message.textContent = '请从小程序内获取访问链接'
+        message.classList.add('error')
+        return
+      }
+
+      try {
+        const result = await callCloudFunction('verifyToken', { token })
+
+        if (result.valid) {
+          overlay.classList.add('hidden')
+          showContent()
+        } else {
+          spinner.style.display = 'none'
+          title.textContent = '访问失败'
+          message.textContent = result.message || '链接无效，请重新获取'
+          message.classList.add('error')
+        }
+      } catch (err) {
+        spinner.style.display = 'none'
+        title.textContent = '验证出错'
+        message.textContent = '网络错误，请稍后重试（' + err.message + '）'
+        message.classList.add('error')
+      }
+    }
+
+    async function callCloudFunction(name, data) {
+      const response = await fetch('/api/cloud-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ functionName: name, data: data })
+      })
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error('HTTP ' + response.status + ': ' + errText)
+      }
+      return await response.json()
+    }
+
+    function showContent() {
+      document.getElementById('navbar').style.display = 'flex'
+      document.getElementById('categories').style.display = 'flex'
+      document.getElementById('postGrid').style.display = 'grid'
+      document.getElementById('tabBar').style.display = 'flex'
+      document.getElementById('tabSpacer').style.display = 'block'
+      loadPosts()
+    }
+
+    async function loadPosts() {
+      const grid = document.getElementById('postGrid')
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>加载中...</p></div>'
+      try {
+        // Supabase 还没配置时先显示空状态
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><p>暂无投稿，快来发布第一条吧</p></div>'
+      } catch (err) {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败</p></div>'
+      }
+    }
+
+    function filterPosts(category, btn) {
+      currentCategory = category
+      document.querySelectorAll('.cat-tag').forEach(t => t.classList.remove('active'))
+      btn.classList.add('active')
+      loadPosts()
+    }
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'))
+      el.classList.add('active')
+    }
+
+    function openPostModal() {
+      alert('投稿功能需要在配置 Supabase 后使用')
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div')
+      div.textContent = text || ''
+      return div.innerHTML
+    }
+
+    document.addEventListener('DOMContentLoaded', verifyToken)
+  </script>
+</body>
+</html>
