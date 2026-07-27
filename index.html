@@ -134,106 +134,89 @@
   </div>
 
   <script>
-    // ========== 配置（部署后替换） ==========
-    const SUPABASE_URL = 'https://你 的项目ID.supabase.co'
-    const SUPABASE_ANON_KEY = '你的anon-key'
+    var currentCategory = 'all';
 
-    let currentCategory = 'all'
-
-    // ========== Token 校验 ==========
     async function verifyToken() {
-      const overlay = document.getElementById('tokenOverlay')
-      const spinner = document.getElementById('tokenSpinner')
-      const title = document.getElementById('tokenTitle')
-      const message = document.getElementById('tokenMessage')
+      var overlay = document.getElementById('tokenOverlay');
+      var spinner = document.getElementById('tokenSpinner');
+      var title = document.getElementById('tokenTitle');
+      var message = document.getElementById('tokenMessage');
 
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('t')
+      var urlParams = new URLSearchParams(window.location.search);
+      var token = urlParams.get('t');
 
       if (!token) {
-        spinner.style.display = 'none'
-        title.textContent = '无法访问'
-        message.textContent = '请从小程序内获取访问链接'
-        message.classList.add('error')
-        return
+        spinner.style.display = 'none';
+        title.textContent = '无法访问';
+        message.textContent = '请从小程序内获取访问链接';
+        message.classList.add('error');
+        return;
       }
 
       try {
-        const result = await callCloudFunction('verifyToken', { token })
+        var result = await callCloudFunction('verifyToken', { token: token });
 
         if (result.valid) {
-          overlay.classList.add('hidden')
-          showContent()
+          overlay.classList.add('hidden');
+          showContent();
         } else {
-          spinner.style.display = 'none'
-          title.textContent = '访问失败'
-          message.textContent = result.message || '链接无效，请重新获取'
-          message.classList.add('error')
+          spinner.style.display = 'none';
+          title.textContent = '访问失败';
+          message.textContent = result.message || '链接无效，请重新获取';
+          message.classList.add('error');
         }
       } catch (err) {
-        spinner.style.display = 'none'
-        title.textContent = '验证出错'
-        message.textContent = '网络错误，请稍后重试（' + err.message + '）'
-        message.classList.add('error')
+        spinner.style.display = 'none';
+        title.textContent = '验证出错';
+        message.textContent = '网络错误，请稍后重试（' + err.message + '）';
+        message.classList.add('error');
       }
     }
 
     async function callCloudFunction(name, data) {
-      const response = await fetch('/api/cloud-proxy', {
+      var response = await fetch('/api/cloud-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ functionName: name, data: data })
-      })
+      });
       if (!response.ok) {
-        const errText = await response.text()
-        throw new Error('HTTP ' + response.status + ': ' + errText)
+        var errText = await response.text();
+        throw new Error('HTTP ' + response.status + ': ' + errText);
       }
-      return await response.json()
+      return await response.json();
     }
 
     function showContent() {
-      document.getElementById('navbar').style.display = 'flex'
-      document.getElementById('categories').style.display = 'flex'
-      document.getElementById('postGrid').style.display = 'grid'
-      document.getElementById('tabBar').style.display = 'flex'
-      document.getElementById('tabSpacer').style.display = 'block'
-      loadPosts()
+      document.getElementById('navbar').style.display = 'flex';
+      document.getElementById('categories').style.display = 'flex';
+      document.getElementById('postGrid').style.display = 'grid';
+      document.getElementById('tabBar').style.display = 'flex';
+      document.getElementById('tabSpacer').style.display = 'block';
+      loadPosts();
     }
 
     async function loadPosts() {
-      const grid = document.getElementById('postGrid')
-      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>加载中...</p></div>'
-      try {
-        // Supabase 还没配置时先显示空状态
-        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><p>暂无投稿，快来发布第一条吧</p></div>'
-      } catch (err) {
-        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败</p></div>'
-      }
+      var grid = document.getElementById('postGrid');
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><p>暂无投稿，快来发布第一条吧</p></div>';
     }
 
     function filterPosts(category, btn) {
-      currentCategory = category
-      document.querySelectorAll('.cat-tag').forEach(t => t.classList.remove('active'))
-      btn.classList.add('active')
-      loadPosts()
+      currentCategory = category;
+      document.querySelectorAll('.cat-tag').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      loadPosts();
     }
 
     function switchTab(tab, el) {
-      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'))
-      el.classList.add('active')
+      document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+      el.classList.add('active');
     }
 
     function openPostModal() {
-      alert('投稿功能需要在配置 Supabase 后使用')
+      alert('投稿功能需要在配置 Supabase 后使用');
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div')
-      div.textContent = text || ''
-      return div.innerHTML
-    }
-
-    document.addEventListener('DOMContentLoaded', verifyToken)
+    document.addEventListener('DOMContentLoaded', verifyToken);
   </script>
 </body>
 </html>
